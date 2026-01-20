@@ -5,9 +5,9 @@ using OpenTK.Windowing.Desktop;
 
 namespace Physics_Engine
 {
-    internal class Game : GameWindow
+    internal class RenderWindow : GameWindow
     {
-        public Game() 
+        public RenderWindow() 
             : base(
                   GameWindowSettings.Default,
                    new NativeWindowSettings()
