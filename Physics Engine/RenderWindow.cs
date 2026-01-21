@@ -2,26 +2,31 @@
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using System.Diagnostics;
 
 namespace Physics_Engine
 {
     internal class RenderWindow : GameWindow
     {
+        private Stopwatch _time;
+
         private Matrix4 _projection;
+        private Matrix4 _view;
+        private Matrix4 _model;
 
         private int _indexCount;
         private int _vao;
         private int _vbo;
         private int _ebo;
 
-        public RenderWindow() 
+        public RenderWindow()
             : base(
                   GameWindowSettings.Default,
-                   nativeWindowSettings: new NativeWindowSettings()
-                   {
-                       ClientSize = new Vector2i(800, 600),
-                       Title = "Render"
-                   })
+                  new NativeWindowSettings()
+                  {
+                      ClientSize = new Vector2i(800, 600),
+                      Title = "3D Render"
+                  })
         { }
 
         protected override void OnResize(ResizeEventArgs e)
@@ -29,109 +34,133 @@ namespace Physics_Engine
             base.OnResize(e);
             GL.Viewport(0, 0, Size.X, Size.Y);
 
-            _projection = Matrix4.CreateOrthographicOffCenter(
-                0, Size.X,
-                Size.Y, 0,
-                -1, 1
+            // Perspective projection
+            _projection = Matrix4.CreatePerspectiveFieldOfView(
+                MathHelper.DegreesToRadians(60f),
+                Size.X / (float)Size.Y,
+                0.1f,
+                100f
             );
 
-            ShaderManager.Get("solid_color").Use();
-            ShaderManager.Get("solid_color").SetMatrix4("uProjection", _projection);
+            Shader shader = ShaderManager.Get("solid_color");
+            shader.Use();
+            shader.SetMatrix4("uProjection", _projection);
         }
 
         protected override void OnLoad()
         {
+            GL.Enable(EnableCap.DepthTest); // enable 3D depth testing
             GL.ClearColor(0.1f, 0.1f, 0.1f, 1f);
 
-            if (!File.Exists("./RuntimeLog.txt")) File.Create("./RuntimeLog.txt").Close();
-            string Log = "";
-            Log += GL.GetString(StringName.Version) + "\n";
-            Log += GL.GetString(StringName.ShadingLanguageVersion) + "\n";
-
-            File.WriteAllText("./RuntimeLog.txt", Log);
-
+            // Simple cube
             float[] vertices =
             {
-                 // position    // uv       // normals
-                 0f, 0f,        0f, 0f,     0f, 0f,
-                 100f, 0f,      1f, 0f,     1f, 0f,
-                 100f, 100f,    1f, 1f,     1f, 1f,
-                 0f, 100f,      0f, 1f,     0f, 1f,
+                // positions          // normals
+                -0.5f, -0.5f, -0.5f,  -0.577f, -0.577f, -0.577f,
+                 0.5f, -0.5f, -0.5f,   0.577f, -0.577f, -0.577f,
+                 0.5f,  0.5f, -0.5f,   0.577f,  0.577f, -0.577f,
+                -0.5f,  0.5f, -0.5f,  -0.577f,  0.577f, -0.577f,
+
+                -0.5f, -0.5f,  0.5f,  -0.577f, -0.577f,  0.577f,
+                 0.5f, -0.5f,  0.5f,   0.577f, -0.577f,  0.577f,
+                 0.5f,  0.5f,  0.5f,   0.577f,  0.577f,  0.577f,
+                -0.5f,  0.5f,  0.5f,  -0.577f,  0.577f,  0.577f,
             };
 
             uint[] indices =
             {
-                0, 1, 2,
-                2, 3, 0
+                // back face
+                0,1,2, 2,3,0,
+                // front face
+                4,5,6, 6,7,4,
+                // left face
+                0,3,7, 7,4,0,
+                // right face
+                1,5,6, 6,2,1,
+                // bottom face
+                0,1,5, 5,4,0,
+                // top face
+                3,2,6, 6,7,3
             };
 
-            // genarate vertex array, vertex buffer, and index buffer
+            _indexCount = indices.Length;
+
+            // VAO/VBO/EBO
             _vao = GL.GenVertexArray();
             _vbo = GL.GenBuffer();
             _ebo = GL.GenBuffer();
-            _indexCount = indices.Length;
 
-            // bind the vertex array
             GL.BindVertexArray(_vao);
 
-            // bind the vertex buffer
             GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
             GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float),
                           vertices, BufferUsageHint.StaticDraw);
 
-            // bind the element buffer
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, _ebo);
             GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint),
                           indices, BufferUsageHint.StaticDraw);
 
             int stride = 6 * sizeof(float);
 
-            GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, stride, 0);
+            // Position
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
             GL.EnableVertexAttribArray(0);
 
-            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false,
-                                   stride, 2 * sizeof(float));
+            // Normal
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, stride, 3 * sizeof(float));
             GL.EnableVertexAttribArray(1);
-
-            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false,
-                                   stride, 4 * sizeof(float));
-            GL.EnableVertexAttribArray(2);
 
             GL.BindVertexArray(0);
 
-            _projection = Matrix4.CreateOrthographicOffCenter(
-                0, Size.X,
-                Size.Y, 0,
-                -1, 1
+            // Camera/view
+            _view = Matrix4.LookAt(new Vector3(2f, 2f, 3f), Vector3.Zero, Vector3.UnitY);
+
+            // Model matrix
+            _model = Matrix4.Identity;
+
+            // Projection
+            _projection = Matrix4.CreatePerspectiveFieldOfView(
+                MathHelper.DegreesToRadians(60f),
+                Size.X / (float)Size.Y,
+                0.1f,
+                100f
             );
 
+            // Load shaders
             ShaderManager.Load(
                 "solid_color",
                 new Dictionary<ShaderType, string>
                 {
-                    { ShaderType.VertexShader, "./Shaders/Projection2D.vert" },
-                    { ShaderType.FragmentShader, "./Shaders/Color.frag" }
+                    { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
+                    { ShaderType.FragmentShader, "./Shaders/Light3D.frag" }
                 }
             );
+
+            _time = Stopwatch.StartNew();
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+            // Increment rotation (radians)
+            float rotationAngle = (float)_time.Elapsed.TotalSeconds;
+            _model = Matrix4.CreateRotationY(rotationAngle);
 
             Shader shader = ShaderManager.Get("solid_color");
             shader.Use();
+
+            shader.SetMatrix4("uModel", _model);
+            shader.SetMatrix4("uView", _view);
             shader.SetMatrix4("uProjection", _projection);
-            shader.SetVector4("uColor", new Vector4(0f, 1f, 0f, 1f)); // green
-            shader.SetVector2("uLightSource", new Vector2(1f, 1f).Normalized());
+            shader.SetFloat("uTime", (float)_time.Elapsed.TotalSeconds);
+
+            shader.SetVector4("uColor", new Vector4(1f, 1f, 1f, 1f));
+            shader.SetVector3("uLightDir", new Vector3(1f, 1f, 1f).Normalized());
+            shader.SetFloat("uGlobalLight", 0.1f);
 
             GL.BindVertexArray(_vao);
-            GL.DrawElements(
-                PrimitiveType.Triangles,
-                _indexCount,
-                DrawElementsType.UnsignedInt,
-                0
-            );
+            GL.DrawElements(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt, 0);
 
             SwapBuffers();
         }

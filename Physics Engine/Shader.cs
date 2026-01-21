@@ -88,6 +88,7 @@ namespace Physics_Engine
         public void SetVector4(string name, Vector4 value) { GL.Uniform4(GetLocation(name), value); }
         public void SetVector3(string name, Vector3 value) { GL.Uniform3(GetLocation(name), value); }
         public void SetVector2(string name, Vector2 value) { GL.Uniform2(GetLocation(name), value); }
+        public void SetFloat(string name, float value) { GL.Uniform1(GetLocation(name), value); }
 
         public void Use()
         {
