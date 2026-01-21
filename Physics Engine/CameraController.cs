@@ -1,4 +1,5 @@
 ﻿using OpenTK.Mathematics;
+using System.Diagnostics;
 
 namespace Physics_Engine
 {
@@ -11,7 +12,7 @@ namespace Physics_Engine
         private float _farClip = 1000f;
         private float _fov = MathHelper.DegreesToRadians(90);
         private float _aspectRatio = 16f / 9f;
-        private float _sensitivity = 25f;
+        private float _sensitivity = 0.0025f;
         
         // Public access to neccisary private fields
         public Matrix4 ProjectionMatrix => _projectionMatrix;
@@ -51,20 +52,27 @@ namespace Physics_Engine
 
         public CameraController(Matrix4 transform, float aspectRatio) : base(transform)
         {
-            _aspectRatio = aspectRatio;
-            CalculateProjectionMatrix();
+            AspectRatio = aspectRatio;
         }
 
         public override void Update()
         {
             if (Global.MouseDelta != Vector2.Zero)
             {
+                // Adjust mouse delta by aspect ratio
                 Vector2 mouseDelta = Global.MouseDelta / _aspectRatio;
+
+                // Calculate pitch and yaw rotations based on mouse movement
                 Quaternion pitch = Quaternion.FromAxisAngle(Vector3.UnitX, -mouseDelta.Y * _sensitivity);
                 Quaternion yaw   = Quaternion.FromAxisAngle(Vector3.UnitY, -mouseDelta.X * _sensitivity);
                 Quaternion rotation = _transform.ExtractRotation();
-                rotation = yaw * rotation * pitch;
+
+                // Apply yaw and pitch to the current rotation
+                rotation = yaw * pitch * rotation;
                 rotation.Normalize();
+                rotation.Z = 0; // Prevent roll
+
+                // Apply the new rotation to the transform while preserving position
                 _transform = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(_transform.ExtractTranslation());
             }
 

@@ -6,7 +6,7 @@ namespace Physics_Engine
     internal static class Global
     {
         public const float Gravity = -9.81f;
-        public const double FramerateCap = 165f;
+        public const double PhysicsRateCap = 60f;
 
         public static bool DebugMode = false;
         public static Vector2 MousePosition = Vector2.Zero;

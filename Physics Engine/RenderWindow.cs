@@ -9,6 +9,7 @@ namespace Physics_Engine
     {
         private CameraController _camera;
         private List<SceneObject> _objects = new();
+        private bool _physicsRunning = false;
 
         public RenderWindow()
             : base(GameWindowSettings.Default,
@@ -24,6 +25,14 @@ namespace Physics_Engine
         protected override void OnResize(ResizeEventArgs e)
         {
             GL.Viewport(0, 0, Size.X, Size.Y);
+            UpdateCamera();
+        }
+
+        protected override void OnLoad()
+        {
+            GL.Enable(EnableCap.DepthTest);
+            GL.ClearColor(1f, 1f, 1f, 1f);
+
             float aspectRatio = Size.X / (float)Size.Y;
 
             // Camera
@@ -33,12 +42,6 @@ namespace Physics_Engine
                 Vector3.UnitY
             );
             _camera = new CameraController(view, aspectRatio);
-        }
-
-        protected override void OnLoad()
-        {
-            GL.Enable(EnableCap.DepthTest);
-            GL.ClearColor(1f, 1f, 1f, 1f);
 
             this.CursorState = CursorState.Hidden;
             Global.MousePosition = new(Cursor.X, Cursor.Y);
@@ -64,7 +67,9 @@ namespace Physics_Engine
                 Matrix4.CreateTranslation(position),
                 TextureLoader.UploadTexture(model.Texture)
             ));
+
             Global.StartTimers();
+            Task.Run(PhysicsUpdate);
         }
 
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
@@ -78,20 +83,23 @@ namespace Physics_Engine
             base.OnKeyDown(e);
         }
 
-        protected override void OnUpdateFrame(FrameEventArgs args)
+        private void PhysicsUpdate()
         {
-            Global.UpdateDeltatime();
+            if (_physicsRunning) return;
+            _physicsRunning = true;
 
-            Vector2 MousePos = new(Cursor.X, Cursor.Y);
-            Global.MouseDelta = MousePos - Global.MousePosition;
-            Global.MousePosition = MousePos;
-
-            _camera.Update();
-            base.OnUpdateFrame(args);
-
-            while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.FramerateCap)
+            while(_physicsRunning)
             {
-                // wait
+                Global.UpdateDeltatime();
+
+                Vector2 MousePos = MousePosition;
+                Global.MouseDelta = MousePos - Global.MousePosition;
+                Global.MousePosition = MousePos;
+
+                _camera.Update();
+
+                while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.PhysicsRateCap)
+                { }
             }
         }
 
@@ -99,7 +107,7 @@ namespace Physics_Engine
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            this.Title = $"Textured + Lit Renderer - FPS: {1f / Global.Deltatime:0}";
+            this.Title = $"Textured + Lit Renderer - FPS: {1f / e.Time:0000} - TPS: {1f / Global.Deltatime:00}";
 
             Shader shader = ShaderManager.Get("textured_lit");
             shader.Use();
@@ -127,6 +135,12 @@ namespace Physics_Engine
             }
 
             SwapBuffers();
+        }
+
+        private void UpdateCamera()
+        {
+            float aspectRatio = Size.X / (float)Size.Y;
+            _camera.AspectRatio = aspectRatio;
         }
     }
 }
