@@ -1,123 +1,163 @@
 ﻿using OpenTK.Mathematics;
-using System.Dynamic;
-using System.Reflection;
+using System.Drawing;
+using System.IO;
+using System.Collections.Generic;
 
 namespace Physics_Engine
 {
     internal class Model
     {
-        private Matrix4 _transform;
-        private Image _texture;
+        private static readonly Random random = new Random();
 
-        private List<Vector3> _vertices;
-        private List<Vector3> _normals;
-        private List<Vector2> _uvs;
-        private List<(int, int, int)> _triangles;
+        private Bitmap _texture;
+        private float _scale;
 
-        public Model(string path, Matrix4? transform = null!, Image? texture = null!)
+        // Raw OBJ data
+        private List<Vector3> _positions = new();
+        private List<Vector3> _normals = new();
+        private List<Vector2> _uvs = new();
+        private List<(int pos, int uv, int norm)[]> _faces = new();
+
+        // Expanded arrays for OpenGL
+        private List<float> _vertices = new();
+        private List<uint> _indices = new();
+
+        public float[] Vertices => _vertices.ToArray();
+        public uint[] Indices => _indices.ToArray();
+        public Bitmap Texture => _texture;
+
+        public Model(string path, float scale, Bitmap? texture = null!)
         {
+            _scale = scale;
+            _texture = texture ?? GenerateDefaultTexture();
+
             LoadOBJ(path);
-            _transform = transform ?? new Matrix4();
-            _texture = texture ?? GenDefaultTexture();
+            ExpandVertices();
         }
 
-        private Image GenDefaultTexture()
+        private Bitmap GenerateDefaultTexture()
         {
-            Bitmap bmp = new(4, 4);
+            int resolution = 100;
+            int divisions = 8;
+            Bitmap bmp = new(divisions * resolution, divisions * resolution);
+
+            // Color col1 = Color.FromArgb(
+            //     random.Next(0, 255), 
+            //     random.Next(0, 255), 
+            //     random.Next(0, 255), 
+            //     255);
+            // Color col2 = Color.FromArgb(
+            //     random.Next(0, 255), 
+            //     random.Next(0, 255), 
+            //     random.Next(0, 255), 
+            //     255);
+
+            Color col1 = Color.DarkGreen;
+            Color col2 = Color.ForestGreen;
+
             for (int i = 0; i < bmp.Width; i++)
-                for(int j = 0; j < bmp.Height; j++)
-                {
-                    if (i % 2 != j % 2)
-                        bmp.SetPixel(i, j, Color.Black);
-                    else
-                        bmp.SetPixel(i, j, Color.Purple);
-                }
+                for (int j = 0; j < bmp.Height; j++)
+                    if (i / resolution % 2 != j / resolution % 2) bmp.SetPixel(i, j, col1);
+                    else bmp.SetPixel(i, j, col2);
 
             return bmp;
         }
 
         private void LoadOBJ(string path)
         {
-            string[] objText = File.ReadAllLines(path);
+            string[] lines = File.ReadAllLines(path);
 
-            for (int i = 0; i < objText.Length; i++)
+            foreach (string line in lines)
             {
-                // Get Line
-                string line = objText[i];
-                if (line.ToLower().StartsWith("v ")) // Vertex position
+                string l = line.Trim();
+                if (string.IsNullOrEmpty(l) || l.StartsWith("#")) continue;
+
+                string[] parts = l.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts[0] == "v") // position
                 {
-                    line = line[2..]; // Trim the "v "
-
-                    // Split into three numbers and make a vector
-                    string[] coords = line.Split(' ');
-                    Vector3 vertex = new(
-                        Convert.ToSingle(coords[0]),
-                        Convert.ToSingle(coords[1]),
-                        Convert.ToSingle(coords[2])
-                        );
-
-                    // Add to _vertices
-                    _vertices.Add(vertex);
+                    _positions.Add(new Vector3(
+                        float.Parse(parts[1]) * _scale,
+                        float.Parse(parts[2]) * _scale,
+                        float.Parse(parts[3]) * _scale
+                    ));
                 }
-                else if (line.ToLower().StartsWith("vn ")) // Vertex normal
+                else if (parts[0] == "vn") // normal
                 {
-                    line = line[3..];
-
-                    // Split into three numbers and make a vector
-                    string[] direction = line.Split(' ');
-                    Vector3 normal = new(
-                        Convert.ToSingle(direction[0]),
-                        Convert.ToSingle(direction[1]),
-                        Convert.ToSingle(direction[2])
-                        );
-
-                    // Add to _vertices
-                    _normals.Add(normal);
+                    _normals.Add(new Vector3(
+                        float.Parse(parts[1]),
+                        float.Parse(parts[2]),
+                        float.Parse(parts[3])
+                    ));
                 }
-                else if (line.ToLower().StartsWith("vt ")) // Vertex texture uv
+                else if (parts[0] == "vt") // uv
                 {
-                    line = line[3..];
-
-                    // Split into three numbers and make a vector
-                    string[] coords = line.Split(' ');
-                    Vector2 uv = new(
-                        Convert.ToSingle(coords[0]),
-                        Convert.ToSingle(coords[1])
-                        );
-
-                    // Add to _vertices
-                    _uvs.Add(uv);
+                    _uvs.Add(new Vector2(
+                        float.Parse(parts[1]),
+                        float.Parse(parts[2])
+                    ));
                 }
-                else if (line.ToLower().StartsWith("f ")) // Face
+                else if (parts[0] == "f") // face
                 {
-                    line = line[2..];
+                    var face = new List<(int pos, int uv, int norm)>();
 
-                    string[] tris = line.Split(" ");
-                    for (int j = 0; j < tris.Length; j++)
+                    for (int i = 1; i < parts.Length; i++)
                     {
-                        string tri = tris[j];
-                        string[] indecies = tri.Split("/");
+                        string[] indices = parts[i].Split('/');
+                        int pos = int.Parse(indices[0]) - 1;
+                        int uv = (indices.Length > 1 && !string.IsNullOrEmpty(indices[1])) ? int.Parse(indices[1]) - 1 : -1;
+                        int norm = (indices.Length > 2) ? int.Parse(indices[2]) - 1 : -1;
 
-                        void ProcessTri(int x, int y, int z) { _triangles.Add((x, y, z)); }
-
-                        for (int k = 0; k < indecies.Length - 2; k++)
-                        {
-                            ProcessTri(
-                                Convert.ToInt32(indecies[k]),
-                                Convert.ToInt32(indecies[k + 1]),
-                                Convert.ToInt32(indecies[k + 2])
-                                );
-                        }
+                        face.Add((pos, uv, norm));
                     }
+
+                    _faces.Add(face.ToArray());
                 }
             }
         }
 
-        public (Vector3 pos, Vector3 normal, Vector2 uv) GetPoint(int index)
-        { return (
-                _vertices[index],
-                _normals[index],
-                _uvs[index]
-                );}
+        private void ExpandVertices()
+        {
+
+            Dictionary<Vertex, uint> vertexMap = new();
+            uint indexCounter = 0;
+
+            foreach (var face in _faces)
+            {
+                // Triangulate face if more than 3 vertices (fan method)
+                for (int i = 1; i<face.Length - 1; i++)
+                {
+                    var tri = new[] { face[0], face[i], face[i + 1] };
+
+                    foreach (var f in tri)
+                    {
+                        Vector3 pos = _positions[f.pos];
+                        Vector2 uv = (f.uv >= 0 && f.uv < _uvs.Count) ? _uvs[f.uv] : Vector2.Zero;
+                        Vector3 norm = (f.norm >= 0 && f.norm < _normals.Count) ? _normals[f.norm] : Vector3.UnitY;
+
+                        Vertex vert = new() { Position = pos, UV = uv, Normal = norm };
+
+                        if (!vertexMap.TryGetValue(vert, out uint index))
+                        {
+                            index = indexCounter++;
+                            vertexMap[vert] = index;
+
+                            _vertices.Add(pos.X);
+                            _vertices.Add(pos.Y);
+                            _vertices.Add(pos.Z);
+
+                            _vertices.Add(norm.X);
+                            _vertices.Add(norm.Y);
+                            _vertices.Add(norm.Z);
+
+                            _vertices.Add(uv.X);
+                            _vertices.Add(uv.Y);
+                        }
+
+                        _indices.Add(index);
+                    }
+                }
+            }
+        }
     }
 }

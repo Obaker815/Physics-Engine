@@ -2,169 +2,118 @@
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using Physics_Engine;
 using System.Diagnostics;
 
-namespace Physics_Engine
+internal class RenderWindow : GameWindow
 {
-    internal class RenderWindow : GameWindow
+    private Stopwatch _time = new();
+
+    private Matrix4 _projection;
+    private Matrix4 _view;
+
+    private List<SceneObject> _objects = new();
+    private int _texture;
+
+    public RenderWindow()
+        : base(GameWindowSettings.Default,
+               new NativeWindowSettings()
+               {
+                   ClientSize = new Vector2i(800, 600),
+                   Title = "Textured + Lit Renderer"
+               })
+    { }
+
+    protected override void OnResize(ResizeEventArgs e)
     {
-        private Stopwatch _time;
+        GL.Viewport(0, 0, Size.X, Size.Y);
+        float aspectRatio = Size.X / (float)Size.Y;
 
-        private Matrix4 _projection;
-        private Matrix4 _view;
-        private Matrix4 _model;
+        // Camera
+        _view = Matrix4.LookAt(
+            new Vector3(5, 5, 5),
+            new Vector3(0, 5, 0),
+            Vector3.UnitY
+        );
 
-        private int _indexCount;
-        private int _vao;
-        private int _vbo;
-        private int _ebo;
+        _projection = Matrix4.CreatePerspectiveFieldOfView(
+            MathHelper.DegreesToRadians(105f),
+            aspectRatio,
+            0.1f,
+            100f
+        );
+    }
 
-        public RenderWindow()
-            : base(
-                  GameWindowSettings.Default,
-                  new NativeWindowSettings()
-                  {
-                      ClientSize = new Vector2i(800, 600),
-                      Title = "3D Render"
-                  })
-        { }
+    protected override void OnLoad()
+    {
+        GL.Enable(EnableCap.DepthTest);
+        GL.ClearColor(0.1f, 0.1f, 0.1f, 1f);
 
-        protected override void OnResize(ResizeEventArgs e)
-        {
-            base.OnResize(e);
-            GL.Viewport(0, 0, Size.X, Size.Y);
 
-            // Perspective projection
-            _projection = Matrix4.CreatePerspectiveFieldOfView(
-                MathHelper.DegreesToRadians(60f),
-                Size.X / (float)Size.Y,
-                0.1f,
-                100f
-            );
-
-            Shader shader = ShaderManager.Get("solid_color");
-            shader.Use();
-            shader.SetMatrix4("uProjection", _projection);
-        }
-
-        protected override void OnLoad()
-        {
-            GL.Enable(EnableCap.DepthTest); // enable 3D depth testing
-            GL.ClearColor(0.1f, 0.1f, 0.1f, 1f);
-
-            Model
-
-            // Simple cube
-            float[] vertices =
+        // Load shader (texture + lighting combined)
+        ShaderManager.Load(
+            "textured_lit",
+            new Dictionary<ShaderType, string>
             {
-                // positions          // normals
-                -0.5f, -0.5f, -0.5f,  -0.577f, -0.577f, -0.577f,
-                 0.5f, -0.5f, -0.5f,   0.577f, -0.577f, -0.577f,
-                 0.5f,  0.5f, -0.5f,   0.577f,  0.577f, -0.577f,
-                -0.5f,  0.5f, -0.5f,  -0.577f,  0.577f, -0.577f,
+                { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
+                { ShaderType.FragmentShader, "./Shaders/TexturedLit3D.frag" }
+            }
+        );
 
-                -0.5f, -0.5f,  0.5f,  -0.577f, -0.577f,  0.577f,
-                 0.5f, -0.5f,  0.5f,   0.577f, -0.577f,  0.577f,
-                 0.5f,  0.5f,  0.5f,   0.577f,  0.577f,  0.577f,
-                -0.5f,  0.5f,  0.5f,  -0.577f,  0.577f,  0.577f,
-            };
+        // Load model(s)
+        Model model = new(@"C:\Users\Obaker815\Downloads\Springtrap\Model.obj", 0.05f);
+        Mesh modelMesh = new(model.Vertices, model.Indices);
 
-            uint[] indices =
-            {
-                // back face
-                0,1,2, 2,3,0,
-                // front face
-                4,5,6, 6,7,4,
-                // left face
-                0,3,7, 7,4,0,
-                // right face
-                1,5,6, 6,2,1,
-                // bottom face
-                0,1,5, 5,4,0,
-                // top face
-                3,2,6, 6,7,3
-            };
-
-            _indexCount = indices.Length;
-
-            // VAO/VBO/EBO
-            _vao = GL.GenVertexArray();
-            _vbo = GL.GenBuffer();
-            _ebo = GL.GenBuffer();
-
-            GL.BindVertexArray(_vao);
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float),
-                          vertices, BufferUsageHint.StaticDraw);
-
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _ebo);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint),
-                          indices, BufferUsageHint.StaticDraw);
-
-            int stride = 6 * sizeof(float);
-
-            // Position
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
-            GL.EnableVertexAttribArray(0);
-
-            // Normal
-            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, stride, 3 * sizeof(float));
-            GL.EnableVertexAttribArray(1);
-
-            GL.BindVertexArray(0);
-
-            // Camera/view
-            _view = Matrix4.LookAt(new Vector3(2f, 2f, 3f), Vector3.Zero, Vector3.UnitY);
-
-            // Model matrix
-            _model = Matrix4.Identity;
-
-            // Projection
-            _projection = Matrix4.CreatePerspectiveFieldOfView(
-                MathHelper.DegreesToRadians(60f),
-                Size.X / (float)Size.Y,
-                0.1f,
-                100f
-            );
-
-            // Load shaders
-            ShaderManager.Load(
-                "solid_color",
-                new Dictionary<ShaderType, string>
-                {
-                    { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
-                    { ShaderType.FragmentShader, "./Shaders/Light3D.frag" }
-                }
-            );
-
-            _time = Stopwatch.StartNew();
-        }
-
-        protected override void OnRenderFrame(FrameEventArgs e)
+        Random rnd = new();
+        for (int i = 0; i < 50; i++)
         {
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            Vector3 position = new(
+                ((float)rnd.NextDouble() - 0.5f) * 5,
+                0,
+                ((float)rnd.NextDouble() - 0.5f) * 5
+                );
 
-            // Increment rotation (radians)
-            float rotationAngle = (float)_time.Elapsed.TotalSeconds;
-            _model = Matrix4.CreateRotationY(rotationAngle);
-
-            Shader shader = ShaderManager.Get("solid_color");
-            shader.Use();
-
-            shader.SetMatrix4("uModel", _model);
-            shader.SetMatrix4("uView", _view);
-            shader.SetMatrix4("uProjection", _projection);
-            shader.SetFloat("uTime", (float)_time.Elapsed.TotalSeconds);
-
-            shader.SetVector4("uColor", new Vector4(1f, 1f, 1f, 1f));
-            shader.SetVector3("uLightDir", new Vector3(1f, 1f, 1f).Normalized());
-            shader.SetFloat("uGlobalLight", 0.1f);
-
-            GL.BindVertexArray(_vao);
-            GL.DrawElements(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt, 0);
-
-            SwapBuffers();
+            _objects.Add(new SceneObject(
+                modelMesh,
+                Matrix4.CreateTranslation(position),
+                TextureLoader.UploadTexture(model.Texture)
+            ));
         }
+
+        _time.Start();
+    }
+
+    protected override void OnRenderFrame(FrameEventArgs e)
+    {
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+        this.Title = $"Textured + Lit Renderer - FPS: {1f / e.Time:0}";
+
+        Shader shader = ShaderManager.Get("textured_lit");
+        shader.Use();
+
+        shader.SetMatrix4("uView", _view);
+        shader.SetMatrix4("uProjection", _projection);
+
+        shader.SetVector3("uLightDir", new Vector3(1, 1, 1).Normalized());
+        shader.SetFloat("uAmbient", 0.1f);
+
+        float rot = (float)_time.Elapsed.TotalSeconds * 0.25f;
+
+        foreach (var obj in _objects)
+        {
+            Matrix4 model =
+                Matrix4.CreateRotationY(rot) *
+                obj.Transform;
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, obj.TextureID);
+            shader.SetInt("uTexture", 0);
+
+            shader.SetMatrix4("uModel", model);
+            obj.Mesh.Draw();
+        }
+
+        SwapBuffers();
     }
 }
