@@ -43,24 +43,32 @@ namespace Physics_Engine
 
             GL.BindVertexArray(vao);
 
+            // bind the vertex buffer
             GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
             GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float),
                           vertices, BufferUsageHint.StaticDraw);
 
+            // bind the element buffer
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
             GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint),
                           indices, BufferUsageHint.StaticDraw);
 
-            // position (locaion: 0)
+            // define the position, data length, stride, and offset of the verticies
             GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
 
-            // uv (location = 1)
+            // define the position, data length, stride, and offset of the UV of each tri
             GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false,
                                    4 * sizeof(float), 2 * sizeof(float));
             GL.EnableVertexAttribArray(1);
 
             GL.BindVertexArray(0);
+
+            Dictionary<ShaderType, string> MainStages = new()
+            {
+                { ShaderType.VertexShader, "./Shaders/Projection2D.vert" },
+            };
+            ShaderManager.Load("Main", MainStages);
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)

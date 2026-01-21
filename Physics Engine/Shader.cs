@@ -33,6 +33,9 @@ public class Shader : IDisposable
 
     private static int Compile(ShaderType type, string source)
     {
+        if (!File.Exists(source))
+            throw new FileNotFoundException($"Shader source not found at: {source}");
+
         int shader = GL.CreateShader(type);
         GL.ShaderSource(shader, source);
         GL.CompileShader(shader);
