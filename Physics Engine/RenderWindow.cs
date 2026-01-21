@@ -52,11 +52,11 @@ namespace Physics_Engine
 
             float[] vertices =
             {
-                 // position    // uv
-                 0f, 0f,        0f, 0f,
-                 100f, 0f,      1f, 0f,
-                 100f, 100f,    1f, 1f,
-                 0f, 100f,      0f, 1f
+                 // position    // uv       // normals
+                 0f, 0f,        0f, 0f,     0f, 0f,
+                 100f, 0f,      1f, 0f,     1f, 0f,
+                 100f, 100f,    1f, 1f,     1f, 1f,
+                 0f, 100f,      0f, 1f,     0f, 1f,
             };
 
             uint[] indices =
@@ -84,14 +84,18 @@ namespace Physics_Engine
             GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint),
                           indices, BufferUsageHint.StaticDraw);
 
-            // define the position, data length, stride, and offset of the verticies
-            GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, 4 * sizeof(float), 0);
+            int stride = 6 * sizeof(float);
+
+            GL.VertexAttribPointer(0, 2, VertexAttribPointerType.Float, false, stride, 0);
             GL.EnableVertexAttribArray(0);
 
-            // define the position, data length, stride, and offset of the UV of each tri
             GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false,
-                                   4 * sizeof(float), 2 * sizeof(float));
+                                   stride, 2 * sizeof(float));
             GL.EnableVertexAttribArray(1);
+
+            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false,
+                                   stride, 4 * sizeof(float));
+            GL.EnableVertexAttribArray(2);
 
             GL.BindVertexArray(0);
 
@@ -119,6 +123,7 @@ namespace Physics_Engine
             shader.Use();
             shader.SetMatrix4("uProjection", _projection);
             shader.SetVector4("uColor", new Vector4(0f, 1f, 0f, 1f)); // green
+            shader.SetVector2("uLightSource", new Vector2(1f, 1f).Normalized());
 
             GL.BindVertexArray(_vao);
             GL.DrawElements(

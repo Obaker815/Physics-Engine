@@ -84,15 +84,10 @@ namespace Physics_Engine
             throw new Exception($"Uniform '{name}' not found.");
         }
 
-        public void SetMatrix4(string name, Matrix4 value)
-        {
-            GL.UniformMatrix4(GetLocation(name), false, ref value);
-        }
-
-        public void SetVector4(string name, Vector4 value)
-        {
-            GL.Uniform4(GetLocation(name), value);
-        }
+        public void SetMatrix4(string name, Matrix4 value) { GL.UniformMatrix4(GetLocation(name), false, ref value); }
+        public void SetVector4(string name, Vector4 value) { GL.Uniform4(GetLocation(name), value); }
+        public void SetVector3(string name, Vector3 value) { GL.Uniform3(GetLocation(name), value); }
+        public void SetVector2(string name, Vector2 value) { GL.Uniform2(GetLocation(name), value); }
 
         public void Use()
         {
