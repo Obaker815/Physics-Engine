@@ -1,75 +1,112 @@
 ﻿using OpenTK.Graphics.OpenGL4;
-public class Shader : IDisposable
+using OpenTK.Mathematics;
+
+namespace Physics_Engine
 {
-    public int Handle { get; }
-
-    private readonly Dictionary<string, int> _uniformLocations = new();
-
-    public Shader(Dictionary<ShaderType, string> stages)
+    public class Shader : IDisposable
     {
-        Handle = GL.CreateProgram();
-        List<int> compiledShaders = new();
+        public int Handle { get; }
 
-        foreach (var (type, source) in stages)
+        private readonly Dictionary<string, int> _uniformLocations = [];
+
+        public Shader(Dictionary<ShaderType, string> stages)
         {
-            int shader = Compile(type, source);
-            GL.AttachShader(Handle, shader);
-            compiledShaders.Add(shader);
+            // Create a OpenGL4 program handle
+            Handle = GL.CreateProgram();
+            List<int> compiledShaders = new();
+
+            // for each shader in stages, compile and attach to the Handle
+            foreach (var (type, source) in stages)
+            {
+                int shader = Compile(type, source);
+                GL.AttachShader(Handle, shader);
+                compiledShaders.Add(shader);
+            }
+
+            // Link the program handle, and check it's link status
+            GL.LinkProgram(Handle);
+            GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out int success);
+            if (success == 0)
+                throw new Exception(GL.GetProgramInfoLog(Handle));
+
+            // Detach and delete the shaders
+            foreach (int s in compiledShaders)
+            {
+                GL.DetachShader(Handle, s);
+                GL.DeleteShader(s);
+            }
+
+            GL.UseProgram(Handle);
+            CacheUniforms();
+            GL.UseProgram(0);
         }
 
-        GL.LinkProgram(Handle);
-        GL.GetProgram(Handle, GetProgramParameterName.LinkStatus, out int success);
-        if (success == 0)
-            throw new Exception(GL.GetProgramInfoLog(Handle));
-
-        foreach (int s in compiledShaders)
+        private static int Compile(ShaderType type, string source)
         {
-            GL.DetachShader(Handle, s);
-            GL.DeleteShader(s);
+            if (!File.Exists(source))
+                throw new FileNotFoundException($"Shader source not found at: {source}");
+
+            // Load the shader from the shader source
+            string src = File.ReadAllText(source);
+            src = src.TrimStart('\uFEFF', '\u200B', '\u0000', ' ', '\t', '\r', '\n');
+
+            // Create the shader handle
+            int shader = GL.CreateShader(type);
+
+            // Link and compile the shader 
+            GL.ShaderSource(shader, src);
+            GL.CompileShader(shader);
+
+            // Throw any shader compile errors
+            GL.GetShader(shader, ShaderParameter.CompileStatus, out int success);
+            if (success == 0)
+                throw new Exception($"{type}: {GL.GetShaderInfoLog(shader)}");
+
+            return shader;
         }
 
-        CacheUniforms();
-    }
-
-    private static int Compile(ShaderType type, string source)
-    {
-        if (!File.Exists(source))
-            throw new FileNotFoundException($"Shader source not found at: {source}");
-
-        int shader = GL.CreateShader(type);
-        GL.ShaderSource(shader, source);
-        GL.CompileShader(shader);
-
-        GL.GetShader(shader, ShaderParameter.CompileStatus, out int success);
-        if (success == 0)
-            throw new Exception($"{type}: {GL.GetShaderInfoLog(shader)}");
-
-        return shader;
-    }
-
-    private void CacheUniforms()
-    {
-        GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out int count);
-
-        for (int i = 0; i < count; i++)
+        private void CacheUniforms()
         {
-            string name = GL.GetActiveUniform(Handle, i, out _, out _);
-            _uniformLocations[name] = GL.GetUniformLocation(Handle, name);
+            GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out int count);
+
+            for (int i = 0; i < count; i++)
+            {
+                string name = GL.GetActiveUniform(Handle, i, out _, out _);
+                _uniformLocations[name] = GL.GetUniformLocation(Handle, name);
+            }
         }
-    }
 
-    public void Use()
-    {
-        GL.UseProgram(Handle);
-    }
+        private int GetLocation(string name)
+        {
+            if (_uniformLocations.TryGetValue(name, out int loc))
+                return loc;
 
-    public void Dispatch(int x, int y = 1, int z = 1)
-    {
-        GL.DispatchCompute(x, y, z);
-    }
+            throw new Exception($"Uniform '{name}' not found.");
+        }
 
-    public void Dispose()
-    {
-        GL.DeleteProgram(Handle);
+        public void SetMatrix4(string name, Matrix4 value)
+        {
+            GL.UniformMatrix4(GetLocation(name), false, ref value);
+        }
+
+        public void SetVector4(string name, Vector4 value)
+        {
+            GL.Uniform4(GetLocation(name), value);
+        }
+
+        public void Use()
+        {
+            GL.UseProgram(Handle);
+        }
+
+        public void Dispatch(int x, int y = 1, int z = 1)
+        {
+            GL.DispatchCompute(x, y, z);
+        }
+
+        public void Dispose()
+        {
+            GL.DeleteProgram(Handle);
+        }
     }
 }
