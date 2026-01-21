@@ -52,6 +52,8 @@ namespace Physics_Engine
             GL.Enable(EnableCap.DepthTest); // enable 3D depth testing
             GL.ClearColor(0.1f, 0.1f, 0.1f, 1f);
 
+            Model
+
             // Simple cube
             float[] vertices =
             {
