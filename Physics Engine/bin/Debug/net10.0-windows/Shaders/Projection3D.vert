@@ -17,9 +17,7 @@ void main()
     vec4 worldPos = uModel * vec4(aPosition, 1.0);
     vWorldPos = worldPos.xyz;
 
-    // Correct normal transform
     vNormal = mat3(transpose(inverse(uModel))) * aNormal;
-
     vTexCoord = aTexCoord;
 
     gl_Position = uProjection * uView * worldPos;

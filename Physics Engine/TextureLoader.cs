@@ -8,15 +8,16 @@ namespace Physics_Engine
 {
     internal class TextureLoader
     {
-        public static int UploadTexture(Bitmap image)
+        public static int UploadTexture(Image image)
         {
+            Bitmap bmp = (Bitmap)image;
             int texture = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, texture);
 
-            image.RotateFlip(RotateFlipType.RotateNoneFlipY);
+            bmp.RotateFlip(RotateFlipType.RotateNoneFlipY);
 
-            BitmapData data = image.LockBits(
-                new Rectangle(0, 0, image.Width, image.Height),
+            BitmapData data = bmp.LockBits(
+                new Rectangle(0, 0, bmp.Width, bmp.Height),
                 ImageLockMode.ReadOnly,
                 System.Drawing.Imaging.PixelFormat.Format32bppArgb
             );
@@ -33,7 +34,7 @@ namespace Physics_Engine
                 data.Scan0
             );
 
-            image.UnlockBits(data);
+            bmp.UnlockBits(data);
 
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);

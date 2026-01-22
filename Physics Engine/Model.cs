@@ -7,65 +7,32 @@ namespace Physics_Engine
 {
     internal class Model
     {
-        private static readonly Random random = new Random();
+        private static readonly Random random = new();
 
-        private Bitmap _texture;
-        private float _scale;
+        private readonly Image _texture;
+        private readonly float _scale;
 
         // Raw OBJ data
-        private List<Vector3> _positions = new();
-        private List<Vector3> _normals = new();
-        private List<Vector2> _uvs = new();
-        private List<(int pos, int uv, int norm)[]> _faces = new();
+        private readonly List<Vector3> _positions = [];
+        private readonly List<Vector3> _normals = [];
+        private readonly List<Vector2> _uvs = [];
+        private readonly List<(int pos, int uv, int norm)[]> _faces = [];
 
         // Expanded arrays for OpenGL
-        private List<float> _vertices = new();
-        private List<uint> _indices = new();
+        private readonly List<float> _vertices = [];
+        private readonly List<uint> _indices = [];
 
-        public float[] Vertices => _vertices.ToArray();
-        public uint[] Indices => _indices.ToArray();
-        public Bitmap Texture => _texture;
+        public float[] Vertices => [.. _vertices.ToArray()];
+        public uint[] Indices => [.. _indices.ToArray()];
+        public Image Texture => _texture;
 
-        public Model(string path, float scale, Bitmap? texture = null!)
+        public Model(string path, float scale, Image? texture = null!)
         {
             _scale = scale;
             _texture = texture ?? GenerateDefaultTexture();
 
             LoadOBJ(path);
             ExpandVertices();
-        }
-
-        private Bitmap GenerateDefaultTexture()
-        {
-            int resolution = 100;
-            int divisions = 8;
-            Bitmap bmp = new(divisions * resolution, divisions * resolution);
-
-            // Color col1 = Color.FromArgb(
-            //     random.Next(0, 255), 
-            //     random.Next(0, 255), 
-            //     random.Next(0, 255), 
-            //     255);
-            // Color col2 = Color.FromArgb(
-            //     random.Next(0, 255), 
-            //     random.Next(0, 255), 
-            //     random.Next(0, 255), 
-            //     255);
-
-            // for (int i = 0; i < bmp.Width; i++)
-            //     for (int j = 0; j < bmp.Height; j++)
-            //         if (i / resolution % 2 != j / resolution % 2) bmp.SetPixel(i, j, col1);
-            //         else bmp.SetPixel(i, j, col2);
-
-            for (int i = 0; i < bmp.Width; i++)
-                for (int j = 0; j < bmp.Height; j++)
-                    bmp.SetPixel(i, j, Color.FromArgb(
-                        255, 
-                        (int)(255f / bmp.Width * i), 
-                        (int)(255f / bmp.Height * j), 
-                        0));
-
-            return bmp;
         }
 
         private void LoadOBJ(string path)
@@ -75,7 +42,7 @@ namespace Physics_Engine
             foreach (string line in lines)
             {
                 string l = line.Trim();
-                if (string.IsNullOrEmpty(l) || l.StartsWith("#")) continue;
+                if (string.IsNullOrEmpty(l) || l.StartsWith('#')) continue;
 
                 string[] parts = l.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
@@ -116,7 +83,7 @@ namespace Physics_Engine
                         face.Add((pos, uv, norm));
                     }
 
-                    _faces.Add(face.ToArray());
+                    _faces.Add([.. face]);
                 }
             }
         }
@@ -164,5 +131,30 @@ namespace Physics_Engine
                 }
             }
         }
+        private static Image GenerateDefaultTexture()
+        {
+            int resolution = 100;
+            int divisions = 8;
+            Bitmap bmp = new(divisions * resolution, divisions * resolution);
+
+            Color col1 = Color.FromArgb(
+                random.Next(0, 255), 
+                random.Next(0, 255), 
+                random.Next(0, 255), 
+                255);
+            Color col2 = Color.FromArgb(
+                random.Next(0, 255), 
+                random.Next(0, 255), 
+                random.Next(0, 255), 
+                255);
+
+            for (int i = 0; i < bmp.Width; i++)
+                for (int j = 0; j < bmp.Height; j++)
+                    if (i / resolution % 2 != j / resolution % 2) bmp.SetPixel(i, j, col1);
+                    else bmp.SetPixel(i, j, col2);
+
+            return bmp;
+        }
+
     }
 }
