@@ -52,13 +52,18 @@ namespace Physics_Engine
             //     random.Next(0, 255), 
             //     255);
 
-            Color col1 = Color.DarkGreen;
-            Color col2 = Color.ForestGreen;
+            // for (int i = 0; i < bmp.Width; i++)
+            //     for (int j = 0; j < bmp.Height; j++)
+            //         if (i / resolution % 2 != j / resolution % 2) bmp.SetPixel(i, j, col1);
+            //         else bmp.SetPixel(i, j, col2);
 
             for (int i = 0; i < bmp.Width; i++)
                 for (int j = 0; j < bmp.Height; j++)
-                    if (i / resolution % 2 != j / resolution % 2) bmp.SetPixel(i, j, col1);
-                    else bmp.SetPixel(i, j, col2);
+                    bmp.SetPixel(i, j, Color.FromArgb(
+                        255, 
+                        (int)(255f / bmp.Width * i), 
+                        (int)(255f / bmp.Height * j), 
+                        0));
 
             return bmp;
         }

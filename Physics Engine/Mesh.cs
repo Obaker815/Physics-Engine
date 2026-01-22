@@ -1,46 +1,49 @@
 ﻿using OpenTK.Graphics.OpenGL4;
 
-internal class Mesh
+namespace Physics_Engine
 {
-    public int VAO;
-    public int IndexCount;
-
-    public Mesh(float[] vertices, uint[] indices)
+    internal class Mesh
     {
-        IndexCount = indices.Length;
+        public int VAO;
+        public int IndexCount;
 
-        int vbo = GL.GenBuffer();
-        int ebo = GL.GenBuffer();
-        VAO = GL.GenVertexArray();
+        public Mesh(float[] vertices, uint[] indices)
+        {
+            IndexCount = indices.Length;
 
-        GL.BindVertexArray(VAO);
+            int vbo = GL.GenBuffer();
+            int ebo = GL.GenBuffer();
+            VAO = GL.GenVertexArray();
 
-        GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
-        GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            GL.BindVertexArray(VAO);
 
-        GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
-        GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, vbo);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
 
-        int stride = 8 * sizeof(float);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
 
-        // position
-        GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
-        GL.EnableVertexAttribArray(0);
+            int stride = 8 * sizeof(float);
 
-        // normal
-        GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, stride, 3 * sizeof(float));
-        GL.EnableVertexAttribArray(1);
+            // position
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, stride, 0);
+            GL.EnableVertexAttribArray(0);
 
-        // uv
-        GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, stride, 6 * sizeof(float));
-        GL.EnableVertexAttribArray(2);
+            // normal
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, stride, 3 * sizeof(float));
+            GL.EnableVertexAttribArray(1);
 
-        GL.BindVertexArray(0);
-    }
+            // uv
+            GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, stride, 6 * sizeof(float));
+            GL.EnableVertexAttribArray(2);
 
-    public void Draw()
-    {
-        GL.BindVertexArray(VAO);
-        GL.DrawElements(PrimitiveType.Triangles, IndexCount, DrawElementsType.UnsignedInt, 0);
+            GL.BindVertexArray(0);
+        }
+
+        public void Draw()
+        {
+            GL.BindVertexArray(VAO);
+            GL.DrawElements(PrimitiveType.Triangles, IndexCount, DrawElementsType.UnsignedInt, 0);
+        }
     }
 }

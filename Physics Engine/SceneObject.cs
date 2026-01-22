@@ -1,15 +1,18 @@
 ﻿using OpenTK.Mathematics;
 
-internal class SceneObject
+namespace Physics_Engine
 {
-    public Mesh Mesh;
-    public Matrix4 Transform;
-    public int TextureID;
-
-    public SceneObject(Mesh mesh, Matrix4 transform, int texID)
+    internal class SceneObject
     {
-        Mesh = mesh;
-        Transform = transform;
-        TextureID = texID;
+        public Mesh Mesh;
+        public Matrix4 Transform;
+        public int TextureID;
+
+        public SceneObject(Mesh mesh, Matrix4 transform, int texID)
+        {
+            Mesh = mesh;
+            Transform = transform;
+            TextureID = texID;
+        }
     }
 }
