@@ -31,7 +31,7 @@ namespace Physics_Engine
         public Matrix4 Transform => _transform;
         internal Matrix4 _transform;
         internal float
-            _drag = 0.9f,
+            _drag = 0.001f,
             _pitch,
             _yaw;
 
@@ -59,14 +59,17 @@ namespace Physics_Engine
             // Apply rotation to transform
             Quaternion rotation = Quaternion.FromAxisAngle(Vector3.UnitY, _yaw);
 
+            float accel = _accelleration * Global.Deltatime;
+
             foreach (var (key, value) in _keyStates)
                 if (value.IsActive)
-                    _velocity += Vector3.Transform(value.Direction, rotation) * _accelleration * Global.Deltatime;
+                    _velocity += Vector3.Transform(value.Direction, rotation) * accel;
 
             Vector3 pos = _transform.ExtractTranslation() + _velocity * Global.Deltatime;
             _transform = Matrix4.CreateFromQuaternion(_transform.ExtractRotation()) * Matrix4.CreateTranslation(pos);
 
-            _velocity *= _drag;
+            _velocity *= float.Pow(_drag, Global.Deltatime);
+
         }
     }
 }

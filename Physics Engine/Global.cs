@@ -8,7 +8,7 @@ namespace Physics_Engine
     {
         // General constants
         public const float Gravity = -9.81f;
-        public const double PhysicsRateCap = 60f;
+        public const double FramerateCap = 0f;
         public static bool DebugMode = false;
 
         // Timing properties

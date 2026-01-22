@@ -20,5 +20,12 @@ namespace Physics_Engine
         {
             return HashCode.Combine(Position, Normal, UV);
         }
+
+        public Vertex(Vector3 position, Vector3 normal, Vector2 uv)
+        {
+            Position = position;
+            Normal = normal;
+            UV = uv;
+        }
     }
 }

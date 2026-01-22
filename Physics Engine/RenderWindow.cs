@@ -38,8 +38,9 @@ namespace Physics_Engine
                 Matrix4.CreateTranslation(3f, 2f, 2f);
 
             _camera = new CameraController(cameraTransform, aspectRatio);
+            _camera.NearClip = 0.001f;
 
-            // WindowState = WindowState.Maximized;
+            WindowState = WindowState.Maximized;
             CursorState = CursorState.Grabbed;
 
             // Load shaders
@@ -53,29 +54,43 @@ namespace Physics_Engine
             );
 
             // Load model(s)
-            Model model = new(
-                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\source\", 
-                0.01f,
-                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\textures\");
-
             Vector3 position = new(0, 0, 0);
-            Matrix4 rotation = Matrix4.CreateFromAxisAngle(Vector3.UnitX, MathHelper.DegToRad * -90) * Matrix4.CreateTranslation(position);
+            Matrix4 transform = Matrix4.CreateFromAxisAngle(Vector3.UnitX, MathHelper.DegToRad * -90) * Matrix4.CreateTranslation(position);
+
+            Model model = new(
+                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\source\",
+                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\textures\",
+                transform,
+                new Vector3(0.01f, 0.01f, 0.01f));
 
             foreach (var (_, obj) in model.SceneObjects)
-            {
                 _objects.Add(obj);
-            }
+            
+            position = new(-7, 1.3f, 7);
+            transform = Matrix4.CreateTranslation(position);
+
+            model = new(
+                @"C:\Users\Obaker815\Downloads\Springtrap\Model.obj",
+                new Vector3(0.005f, 0.005f, 0.005f),
+                transform);
+
+            foreach (var (_, obj) in model.SceneObjects)
+                _objects.Add(obj);
 
             Global.StartTimers();
         }
 
+        int _lastFramerateUpdate = -1;
+        int _numframes = 0;
+        int _framerate = 0;
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
             Global.MouseDelta = MouseState.Delta;
 
             _camera.Update();
 
-            while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.PhysicsRateCap) { }
+            if (Global.FramerateCap != 0)
+                while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.FramerateCap) { }
 
             base.OnUpdateFrame(args);
             Global.Update();
@@ -85,7 +100,19 @@ namespace Physics_Engine
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            this.Title = $"Textured + Lit Renderer - FOV: {MathHelper.RadiansToDegrees(_camera.FOV):000}- FPS: {1f / e.Time:0000} - TPS: {1f / Global.Deltatime:00}";
+            _numframes++;
+            this.Title = $"Textured + Lit Renderer " +
+                $"- FOV: {MathHelper.RadiansToDegrees(_camera.FOV):000} " +
+                $"- FPS: {_framerate} " +
+                $"- CameraPos: {_camera.Transform.ExtractTranslation()} " +
+                $"- CameraRotation: {_camera.Transform.ExtractRotation()}";
+
+            if (double.Floor(Global.Elapsedtime) > _lastFramerateUpdate)
+            {
+                _framerate = _numframes;
+                _numframes = 0;
+                _lastFramerateUpdate = (int)double.Floor(Global.Elapsedtime);
+            }
 
             Shader shader = ShaderManager.Get("textured_lit");
             shader.Use();
@@ -93,7 +120,7 @@ namespace Physics_Engine
             shader.SetMatrix4("uView", Matrix4.Invert(_camera.Transform));
             shader.SetMatrix4("uProjection", _camera.ProjectionMatrix);
 
-            shader.SetVector3("uLightDir", -new Vector3(0, 1, 0).Normalized());
+            shader.SetVector3("uLightDir", -new Vector3(3, 3, 2).Normalized());
             shader.SetVector3("uLightColor", new Vector3(1, 1, 1));
             shader.SetFloat("uAmbient", 0.2f);
 
