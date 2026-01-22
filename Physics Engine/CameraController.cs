@@ -13,9 +13,11 @@ namespace Physics_Engine
         private float
             _nearClip = 0.1f,
             _farClip = 1000f,
-            _fov = MathHelper.DegreesToRadians(90),
             _aspectRatio = 16f / 9f,
-            _sensitivity = 0.0025f;
+            _sensitivity = 0.0025f,
+            _fov = MathHelper.DegreesToRadians(105),
+            _minFOV = MathHelper.DegreesToRadians(60),
+            _maxFOV = MathHelper.DegreesToRadians(120);
         
         // Public access to private fields
         public Matrix4 ProjectionMatrix => _projectionMatrix;
@@ -41,7 +43,7 @@ namespace Physics_Engine
         public float FOV {
             get => _fov;
             set {
-                _fov = MathHelper.DegreesToRadians(value);
+                _fov = float.Clamp(value, _minFOV, _maxFOV);
                 CalculateProjectionMatrix();
             }
         }
@@ -85,7 +87,7 @@ namespace Physics_Engine
             }
 
             if (Global.MouseDeltaScroll != 0)
-                FOV -= Global.MouseDeltaScroll * 5f;
+                FOV -= MathHelper.DegreesToRadians(Global.MouseDeltaScroll * 5);
 
             base.Update();
         }

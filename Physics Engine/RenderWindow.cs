@@ -69,7 +69,6 @@ namespace Physics_Engine
 
         protected override void OnUpdateFrame(FrameEventArgs args)
         {
-            Global.Update();
             Global.MouseDelta = MouseState.Delta;
 
             _camera.Update();
@@ -77,13 +76,14 @@ namespace Physics_Engine
             while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.PhysicsRateCap) { }
 
             base.OnUpdateFrame(args);
+            Global.Update();
         }   
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            this.Title = $"Textured + Lit Renderer - FPS: {1f / e.Time:0000} - TPS: {1f / Global.Deltatime:00}";
+            this.Title = $"Textured + Lit Renderer - FOV: {MathHelper.RadiansToDegrees(_camera.FOV):000}- FPS: {1f / e.Time:0000} - TPS: {1f / Global.Deltatime:00}";
 
             Shader shader = ShaderManager.Get("textured_lit");
             shader.Use();
@@ -152,6 +152,7 @@ namespace Physics_Engine
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
             Global.MouseDeltaScroll += e.OffsetY;
+
             base.OnMouseWheel(e);
         }
     }
