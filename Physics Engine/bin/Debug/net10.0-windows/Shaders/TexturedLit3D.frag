@@ -14,14 +14,16 @@ uniform float uAmbient;
 
 void main()
 {
+    vec3 temp = uLightColor * uAmbient;
     vec3 normal = normalize(vNormal);
     vec3 lightDir = normalize(uLightDir);
 
-    float diff = dot(normal, lightDir) * 0.5 - 0.5;
+    float diff = dot(normal, lightDir) * 0.5 + 0.5;
 
-    vec3 color = texture(uTexture, vTexCoord).rgb * diff;
-    color = color * (1 - uAmbient) + uAmbient;
-    color = color * uLightColor;
+    vec3 color = texture(uTexture, vTexCoord).rgb;// * diff;
+    // color = color * (1 - uAmbient) + vec3(uAmbient);
+    // color = color * uLightColor;
+
 
     FragColor = vec4(color, 1.0);
 }

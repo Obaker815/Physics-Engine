@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Physics_Engine
 {
@@ -9,95 +10,186 @@ namespace Physics_Engine
     {
         private static readonly Random random = new();
 
-        private readonly Image _texture;
         private readonly float _scale;
 
         // Raw OBJ data
-        private readonly List<Vector3> _positions = [];
-        private readonly List<Vector3> _normals = [];
-        private readonly List<Vector2> _uvs = [];
-        private readonly List<(int pos, int uv, int norm)[]> _faces = [];
+        private readonly List<Vector3> _positions = new();
+        private readonly List<Vector3> _normals = new();
+        private readonly List<Vector2> _uvs = new();
 
-        // Expanded arrays for OpenGL
-        private readonly List<float> _vertices = [];
-        private readonly List<uint> _indices = [];
+        // Faces grouped by material
+        private readonly Dictionary<string, List<(int pos, int uv, int norm)[]>> _facesByMaterial = new();
 
-        public float[] Vertices => [.. _vertices.ToArray()];
-        public uint[] Indices => [.. _indices.ToArray()];
-        public Image Texture => _texture;
+        // Texture cache
+        private readonly Dictionary<string, int> _textureCache = new();
 
-        public Model(string path, float scale, Image? texture = null!)
+        // Public: material name -> SceneObject
+        public Dictionary<string, SceneObject> SceneObjects { get; } = new();
+
+        public Model(string objPath, float scale = 1f, Image? texture = null!)
         {
             _scale = scale;
-            _texture = texture ?? GenerateDefaultTexture();
 
-            LoadOBJ(path);
-            ExpandVertices();
+            if (texture != null)
+            {
+                SceneObjects["default"] = new SceneObject(
+                    new Mesh(Array.Empty<float>(), Array.Empty<uint>()),
+                    Matrix4.Identity,
+                    TextureLoader.UploadTexture(texture)
+                );
+            }
+            else
+            {
+                SceneObjects["default"] = new SceneObject(
+                    new Mesh(Array.Empty<float>(), Array.Empty<uint>()),
+                    Matrix4.Identity,
+                    TextureLoader.UploadTexture(GenerateDefaultTexture())
+                );
+            }
+
+            ParseOBJ(objPath);
+            foreach (var kvp in _facesByMaterial)
+            {
+                var so = BuildSceneObject(kvp.Key, kvp.Value);
+                SceneObjects[kvp.Key] = so;
+            }
         }
 
-        private void LoadOBJ(string path)
+        /// <summary>
+        /// New constructor: objDirectory = folder containing .obj, scale, texturesDirectory
+        /// </summary>
+        public Model(string objDirectory, float scale, string texturesDirectory)
         {
-            string[] lines = File.ReadAllLines(path);
+            _scale = scale;
 
-            foreach (string line in lines)
+            // Find the OBJ file (first .obj in folder)
+            string[] objFiles = Directory.GetFiles(objDirectory, "*.obj");
+            if (objFiles.Length == 0)
+                throw new FileNotFoundException("No OBJ file found in directory: " + objDirectory);
+
+            string objPath = objFiles[0];
+
+            // Parse MTL if it exists
+            string mtlPath = Path.Combine(objDirectory, Path.GetFileNameWithoutExtension(objPath) + ".mtl");
+            if (File.Exists(mtlPath))
+                ParseMTL(mtlPath, texturesDirectory);
+
+            // Parse OBJ and group faces per material
+            ParseOBJ(objPath);
+
+            // Build SceneObjects dictionary
+            foreach (var kvp in _facesByMaterial)
+            {
+                SceneObjects[kvp.Key] = BuildSceneObject(kvp.Key, kvp.Value, texturesDirectory);
+            }
+
+            // Ensure at least one default SceneObject exists
+            if (SceneObjects.Count == 0)
+            {
+                int texID = TextureLoader.UploadTexture(GenerateDefaultTexture());
+                SceneObjects["default"] = new SceneObject(new Mesh(Array.Empty<float>(), Array.Empty<uint>()), Matrix4.Identity, texID);
+            }
+        }
+
+        private void ParseMTL(string mtlPath, string texturesFolder)
+        {
+            string? currentMaterial = null;
+
+            foreach (string line in File.ReadAllLines(mtlPath))
             {
                 string l = line.Trim();
-                if (string.IsNullOrEmpty(l) || l.StartsWith('#')) continue;
+                if (string.IsNullOrEmpty(l) || l.StartsWith("#")) continue;
 
-                string[] parts = l.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = l.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
 
-                if (parts[0] == "v") // position
+                if (parts[0] == "newmtl")
                 {
-                    _positions.Add(new Vector3(
-                        float.Parse(parts[1]) * _scale,
-                        float.Parse(parts[2]) * _scale,
-                        float.Parse(parts[3]) * _scale
-                    ));
+                    currentMaterial = parts[1];
                 }
-                else if (parts[0] == "vn") // normal
+                else if (parts[0] == "map_Kd" && currentMaterial != null)
                 {
-                    _normals.Add(new Vector3(
-                        float.Parse(parts[1]),
-                        float.Parse(parts[2]),
-                        float.Parse(parts[3])
-                    ));
-                }
-                else if (parts[0] == "vt") // uv
-                {
-                    _uvs.Add(new Vector2(
-                        float.Parse(parts[1]),
-                        float.Parse(parts[2])
-                    ));
-                }
-                else if (parts[0] == "f") // face
-                {
-                    var face = new List<(int pos, int uv, int norm)>();
+                    // Convert the .tga reference in the MTL to .png in the textures folder
+                    string textureFile = Path.Combine(texturesFolder, Path.GetFileNameWithoutExtension(parts[1]) + ".png");
 
-                    for (int i = 1; i < parts.Length; i++)
+                    if (File.Exists(textureFile))
                     {
-                        string[] indices = parts[i].Split('/');
-                        int pos = int.Parse(indices[0]) - 1;
-                        int uv = (indices.Length > 1 && !string.IsNullOrEmpty(indices[1])) ? int.Parse(indices[1]) - 1 : -1;
-                        int norm = (indices.Length > 2) ? int.Parse(indices[2]) - 1 : -1;
-
-                        face.Add((pos, uv, norm));
+                        _textureCache[currentMaterial] = TextureLoader.UploadTexture(Image.FromFile(textureFile));
+                        Debug.WriteLine($"Loaded texture for {currentMaterial}: {textureFile} -> {_textureCache[currentMaterial]}");
                     }
-
-                    _faces.Add([.. face]);
+                    else
+                    {
+                        Debug.WriteLine($"Texture not found for {currentMaterial}: {textureFile}");
+                    }
                 }
             }
         }
 
-        private void ExpandVertices()
+        private void ParseOBJ(string objPath)
         {
+            string currentMaterial = "default";
 
-            Dictionary<Vertex, uint> vertexMap = new();
+            foreach (string line in File.ReadAllLines(objPath))
+            {
+                string l = line.Trim();
+                if (string.IsNullOrEmpty(l) || l.StartsWith("#")) continue;
+
+                string[] parts = l.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                switch (parts[0])
+                {
+                    case "v":
+                        _positions.Add(new Vector3(
+                            float.Parse(parts[1]) * _scale,
+                            float.Parse(parts[2]) * _scale,
+                            float.Parse(parts[3]) * _scale));
+                        break;
+
+                    case "vn":
+                        _normals.Add(new Vector3(
+                            float.Parse(parts[1]),
+                            float.Parse(parts[2]),
+                            float.Parse(parts[3])));
+                        break;
+
+                    case "vt":
+                        _uvs.Add(new Vector2(
+                            float.Parse(parts[1]),
+                            float.Parse(parts[2])));
+                        break;
+
+                    case "usemtl":
+                        currentMaterial = parts[1];
+                        break;
+
+                    case "f":
+                        if (!_facesByMaterial.ContainsKey(currentMaterial))
+                            _facesByMaterial[currentMaterial] = new List<(int pos, int uv, int norm)[]>();
+
+                        var face = new List<(int pos, int uv, int norm)>();
+                        for (int i = 1; i < parts.Length; i++)
+                        {
+                            string[] indices = parts[i].Split('/');
+                            int pos = int.Parse(indices[0]) - 1;
+                            int uv = (indices.Length > 1 && !string.IsNullOrEmpty(indices[1])) ? int.Parse(indices[1]) - 1 : -1;
+                            int norm = (indices.Length > 2) ? int.Parse(indices[2]) - 1 : -1;
+                            face.Add((pos, uv, norm));
+                        }
+                        _facesByMaterial[currentMaterial].Add(face.ToArray());
+                        break;
+                }
+            }
+        }
+
+        private SceneObject BuildSceneObject(string materialName, List<(int pos, int uv, int norm)[]> faces, string? texturesFolder = null)
+        {
+            List<float> vertices = new();
+            List<uint> indices = new();
+            Dictionary<string, uint> vertexMap = new();
             uint indexCounter = 0;
 
-            foreach (var face in _faces)
+            foreach (var face in faces)
             {
-                // Triangulate face if more than 3 vertices (fan method)
-                for (int i = 1; i<face.Length - 1; i++)
+                for (int i = 1; i < face.Length - 1; i++)
                 {
                     var tri = new[] { face[0], face[i], face[i + 1] };
 
@@ -107,30 +199,34 @@ namespace Physics_Engine
                         Vector2 uv = (f.uv >= 0 && f.uv < _uvs.Count) ? _uvs[f.uv] : Vector2.Zero;
                         Vector3 norm = (f.norm >= 0 && f.norm < _normals.Count) ? _normals[f.norm] : Vector3.UnitY;
 
-                        Vertex vert = new() { Position = pos, UV = uv, Normal = norm };
-
-                        if (!vertexMap.TryGetValue(vert, out uint index))
+                        string key = $"{pos.X},{pos.Y},{pos.Z},{norm.X},{norm.Y},{norm.Z},{uv.X},{uv.Y}";
+                        if (!vertexMap.TryGetValue(key, out uint index))
                         {
                             index = indexCounter++;
-                            vertexMap[vert] = index;
+                            vertexMap[key] = index;
 
-                            _vertices.Add(pos.X);
-                            _vertices.Add(pos.Y);
-                            _vertices.Add(pos.Z);
-
-                            _vertices.Add(norm.X);
-                            _vertices.Add(norm.Y);
-                            _vertices.Add(norm.Z);
-
-                            _vertices.Add(uv.X);
-                            _vertices.Add(uv.Y);
+                            vertices.Add(pos.X); vertices.Add(pos.Y); vertices.Add(pos.Z);
+                            vertices.Add(norm.X); vertices.Add(norm.Y); vertices.Add(norm.Z);
+                            vertices.Add(uv.X); vertices.Add(uv.Y);
                         }
 
-                        _indices.Add(index);
+                        indices.Add(index);
                     }
                 }
             }
+
+            Mesh mesh = new(vertices.ToArray(), indices.ToArray());
+
+            // Texture
+            int textureID;
+            if (_textureCache.TryGetValue(materialName, out int cachedTex))
+                textureID = cachedTex;
+            else
+                textureID = TextureLoader.UploadTexture(GenerateDefaultTexture());
+
+            return new SceneObject(mesh, Matrix4.Identity, textureID);
         }
+
         private static Image GenerateDefaultTexture()
         {
             int resolution = 100;
@@ -155,6 +251,5 @@ namespace Physics_Engine
 
             return bmp;
         }
-
     }
 }

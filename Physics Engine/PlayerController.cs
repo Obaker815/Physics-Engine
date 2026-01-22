@@ -32,8 +32,8 @@ namespace Physics_Engine
         internal Matrix4 _transform;
         internal float
             _drag = 0.9f,
-            _pitch = 0f,
-            _yaw = 0f;
+            _pitch,
+            _yaw;
 
         internal float _accelleration = 50f;
         internal Vector3 _velocity;
@@ -45,7 +45,7 @@ namespace Physics_Engine
 
             _transform = transform;
             
-            var euler = Matrix4.LookAt(_transform.ExtractTranslation(), Vector3.Zero, Vector3.UnitY).ExtractRotation().ToEulerAngles();
+            var euler = -Matrix4.LookAt(transform.ExtractTranslation(), new Vector3(0, transform.ExtractTranslation().Y, 0), Vector3.UnitY).ExtractRotation().ToEulerAngles();
             _pitch = euler.X;
             _yaw = euler.Y;
         }

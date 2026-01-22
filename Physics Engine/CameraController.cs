@@ -1,6 +1,4 @@
 ﻿using OpenTK.Mathematics;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Diagnostics;
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace Physics_Engine
@@ -59,8 +57,8 @@ namespace Physics_Engine
         {
             AspectRatio = aspectRatio;
 
-            _keyStates.Add("Up", new(Keys.Space, new Vector3(0, 1, 0)));
-            _keyStates.Add("Down", new(Keys.LeftControl, new Vector3(0, -1, 0)));
+            _keyStates.Add("Up",   new(Keys.Space,     new Vector3(0,  1, 0)));
+            _keyStates.Add("Down", new(Keys.LeftShift, new Vector3(0, -1, 0)));
         }
 
         public override void Update()

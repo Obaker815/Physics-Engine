@@ -39,7 +39,7 @@ namespace Physics_Engine
 
             _camera = new CameraController(cameraTransform, aspectRatio);
 
-            WindowState = WindowState.Maximized;
+            // WindowState = WindowState.Maximized;
             CursorState = CursorState.Grabbed;
 
             // Load shaders
@@ -53,16 +53,18 @@ namespace Physics_Engine
             );
 
             // Load model(s)
-            Model model = new(@"./Models/Fish/Model.obj", 1);
-            Mesh modelMesh = new(model.Vertices, model.Indices);
+            Model model = new(
+                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\source\", 
+                0.01f,
+                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\textures\");
 
             Vector3 position = new(0, 0, 0);
+            Matrix4 rotation = Matrix4.CreateFromAxisAngle(Vector3.UnitX, MathHelper.DegToRad * -90) * Matrix4.CreateTranslation(position);
 
-            _objects.Add(new SceneObject(
-                modelMesh,
-                Matrix4.CreateTranslation(position),
-                TextureLoader.UploadTexture(model.Texture)
-            ));
+            foreach (var (_, obj) in model.SceneObjects)
+            {
+                _objects.Add(obj);
+            }
 
             Global.StartTimers();
         }
@@ -91,10 +93,12 @@ namespace Physics_Engine
             shader.SetMatrix4("uView", Matrix4.Invert(_camera.Transform));
             shader.SetMatrix4("uProjection", _camera.ProjectionMatrix);
 
-            shader.SetVector3("uLightDir", -new Vector3(1, 1, 1).Normalized());
-            shader.SetFloat("uAmbient", 0.1f);
+            shader.SetVector3("uLightDir", -new Vector3(0, 1, 0).Normalized());
+            shader.SetVector3("uLightColor", new Vector3(1, 1, 1));
+            shader.SetFloat("uAmbient", 0.2f);
 
             float rot = Global.Elapsedtime * 0.25f;
+            rot = 0;
 
             foreach (var obj in _objects)
             {

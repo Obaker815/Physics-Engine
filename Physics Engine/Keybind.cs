@@ -3,10 +3,10 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace Physics_Engine
 {
-    internal struct Keybind(Keys key, Vector3 direction)
+    internal struct Keybind(Keys key, Vector3? direction = null!)
     {
         public Keys Key = key;
-        public Vector3 Direction = direction;
+        public Vector3 Direction = direction ?? Vector3.Zero;
         public bool IsActive = false;
     }
 }
