@@ -1,5 +1,7 @@
 ﻿using OpenTK.Mathematics;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 using System.Diagnostics;
+using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace Physics_Engine
 {
@@ -8,13 +10,14 @@ namespace Physics_Engine
         // Private fields for camera properties
         private Matrix4 _projectionMatrix;
 
-        private float _nearClip = 0.1f;
-        private float _farClip = 1000f;
-        private float _fov = MathHelper.DegreesToRadians(90);
-        private float _aspectRatio = 16f / 9f;
-        private float _sensitivity = 0.0025f;
+        private float
+            _nearClip = 0.1f,
+            _farClip = 1000f,
+            _fov = MathHelper.DegreesToRadians(90),
+            _aspectRatio = 16f / 9f,
+            _sensitivity = 0.0025f;
         
-        // Public access to neccisary private fields
+        // Public access to private fields
         public Matrix4 ProjectionMatrix => _projectionMatrix;
         public float Sensitivity {
             get => _sensitivity;
@@ -53,28 +56,36 @@ namespace Physics_Engine
         public CameraController(Matrix4 transform, float aspectRatio) : base(transform)
         {
             AspectRatio = aspectRatio;
+
+            _keyStates.Add("Up", new(Keys.Space, new Vector3(0, 1, 0)));
+            _keyStates.Add("Down", new(Keys.LeftControl, new Vector3(0, -1, 0)));
         }
 
         public override void Update()
         {
-            if (Global.MouseDelta != Vector2.Zero)
+            // if (Global.MouseButtonStates[MouseButton.Left])
             {
-                // Adjust mouse delta by aspect ratio
-                Vector2 mouseDelta = Global.MouseDelta / _aspectRatio;
+                Vector2 mouseDelta = Global.MouseDelta;
 
-                // Calculate pitch and yaw rotations based on mouse movement
-                Quaternion pitch = Quaternion.FromAxisAngle(Vector3.UnitX, -mouseDelta.Y * _sensitivity);
-                Quaternion yaw   = Quaternion.FromAxisAngle(Vector3.UnitY, -mouseDelta.X * _sensitivity);
-                Quaternion rotation = _transform.ExtractRotation();
+                _yaw   -= mouseDelta.X * _sensitivity;
+                _pitch -= mouseDelta.Y * _sensitivity;
 
-                // Apply yaw and pitch to the current rotation
-                rotation = yaw * pitch * rotation;
-                rotation.Normalize();
-                rotation.Z = 0; // Prevent roll
+                _pitch = MathHelper.Clamp(
+                    _pitch,
+                    MathHelper.DegreesToRadians(-89f),
+                    MathHelper.DegreesToRadians(89f)
+                );
 
-                // Apply the new rotation to the transform while preserving position
-                _transform = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(_transform.ExtractTranslation());
+                Quaternion rotation =
+                    Quaternion.FromAxisAngle(Vector3.UnitY, _yaw) *
+                    Quaternion.FromAxisAngle(Vector3.UnitX, _pitch);
+
+                Vector3 pos = _transform.ExtractTranslation();
+                _transform = Matrix4.CreateFromQuaternion(rotation) * Matrix4.CreateTranslation(pos);
             }
+
+            if (Global.MouseDeltaScroll != 0)
+                FOV -= Global.MouseDeltaScroll * 5f;
 
             base.Update();
         }

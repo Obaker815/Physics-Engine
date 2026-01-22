@@ -7,9 +7,8 @@ namespace Physics_Engine
 {
     internal class RenderWindow : GameWindow
     {
+        private readonly List<SceneObject> _objects = [];
         private CameraController _camera;
-        private List<SceneObject> _objects = new();
-        private bool _physicsRunning = false;
 
         public RenderWindow()
             : base(GameWindowSettings.Default,
@@ -31,22 +30,19 @@ namespace Physics_Engine
         protected override void OnLoad()
         {
             GL.Enable(EnableCap.DepthTest);
-            GL.ClearColor(1f, 1f, 1f, 1f);
+            GL.ClearColor(0.1f, 0.1f, 0.1f, 1f);
 
             float aspectRatio = Size.X / (float)Size.Y;
-
             // Camera
-            Matrix4 view = Matrix4.LookAt(
-                new Vector3(3, 2, 2),
-                new Vector3(0, 0, 0),
-                Vector3.UnitY
-            );
-            _camera = new CameraController(view, aspectRatio);
+            Matrix4 cameraTransform =
+                Matrix4.CreateTranslation(3f, 2f, 2f);
 
-            this.CursorState = CursorState.Hidden;
-            Global.MousePosition = new(Cursor.X, Cursor.Y);
+            _camera = new CameraController(cameraTransform, aspectRatio);
 
-            // Load shader (texture + lighting combined)
+            WindowState = WindowState.Maximized;
+            CursorState = CursorState.Grabbed;
+
+            // Load shaders
             ShaderManager.Load(
                 "textured_lit",
                 new Dictionary<ShaderType, string>
@@ -57,7 +53,7 @@ namespace Physics_Engine
             );
 
             // Load model(s)
-            Model model = new(@"./Models/Fish/Model.obj", 1, Bitmap.FromFile(@"./Models/Fish/Texture.jpg"));
+            Model model = new(@"./Models/Fish/Model.obj", 1);
             Mesh modelMesh = new(model.Vertices, model.Indices);
 
             Vector3 position = new(0, 0, 0);
@@ -69,39 +65,19 @@ namespace Physics_Engine
             ));
 
             Global.StartTimers();
-            Task.Run(PhysicsUpdate);
         }
 
-        protected override void OnKeyDown(KeyboardKeyEventArgs e)
+        protected override void OnUpdateFrame(FrameEventArgs args)
         {
-            PlayerController.UpdateKeybindings(e.Key, true);
-            base.OnKeyDown(e);
-        }
-        protected override void OnKeyUp(KeyboardKeyEventArgs e)
-        {
-            PlayerController.UpdateKeybindings(e.Key, false);
-            base.OnKeyDown(e);
-        }
+            Global.Update();
+            Global.MouseDelta = MouseState.Delta;
 
-        private void PhysicsUpdate()
-        {
-            if (_physicsRunning) return;
-            _physicsRunning = true;
+            _camera.Update();
 
-            while(_physicsRunning)
-            {
-                Global.UpdateDeltatime();
+            while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.PhysicsRateCap) { }
 
-                Vector2 MousePos = MousePosition;
-                Global.MouseDelta = MousePos - Global.MousePosition;
-                Global.MousePosition = MousePos;
-
-                _camera.Update();
-
-                while(Global.Deltatimer.Elapsed.TotalMilliseconds < 1000.0 / Global.PhysicsRateCap)
-                { }
-            }
-        }
+            base.OnUpdateFrame(args);
+        }   
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
@@ -112,10 +88,10 @@ namespace Physics_Engine
             Shader shader = ShaderManager.Get("textured_lit");
             shader.Use();
 
-            shader.SetMatrix4("uView", _camera.Transform);
+            shader.SetMatrix4("uView", Matrix4.Invert(_camera.Transform));
             shader.SetMatrix4("uProjection", _camera.ProjectionMatrix);
 
-            shader.SetVector3("uLightDir", -new Vector3(1, 0, 1).Normalized());
+            shader.SetVector3("uLightDir", -new Vector3(1, 1, 1).Normalized());
             shader.SetFloat("uAmbient", 0.1f);
 
             float rot = Global.Elapsedtime * 0.25f;
@@ -141,6 +117,42 @@ namespace Physics_Engine
         {
             float aspectRatio = Size.X / (float)Size.Y;
             _camera.AspectRatio = aspectRatio;
+        }
+
+        protected override void OnKeyDown(KeyboardKeyEventArgs e)
+        {
+            PlayerController.UpdateKeybindings(e.Key, true);
+            base.OnKeyDown(e);
+        }
+        protected override void OnKeyUp(KeyboardKeyEventArgs e)
+        {
+            PlayerController.UpdateKeybindings(e.Key, false);
+            base.OnKeyDown(e);
+        }
+        protected override void OnMouseDown(MouseButtonEventArgs e)
+        {
+            foreach (var (key, _) in Global.MouseButtonStates)
+                if (e.Button == key)
+                {
+                    Global.MouseButtonStates[key] = true;
+                }
+
+            base.OnMouseDown(e);
+        }
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            foreach (var (key, _) in Global.MouseButtonStates)
+                if (e.Button == key)
+                {
+                    Global.MouseButtonStates[key] = false;
+                }
+
+            base.OnMouseDown(e);
+        }
+        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        {
+            Global.MouseDeltaScroll += e.OffsetY;
+            base.OnMouseWheel(e);
         }
     }
 }
