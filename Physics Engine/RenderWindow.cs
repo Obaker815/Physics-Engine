@@ -2,6 +2,7 @@
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using System.Diagnostics;
 
 namespace Physics_Engine
 {
@@ -63,8 +64,16 @@ namespace Physics_Engine
                 transform,
                 new Vector3(0.01f, 0.01f, 0.01f));
 
+            int yPos = 0;
+            int yoffset = 6;
+
             foreach (var (_, obj) in model.SceneObjects)
+            {
+                obj.Transform *= Matrix4.CreateTranslation(new(0, yPos, 0));
+
                 _objects.Add(obj);
+                yPos += yoffset;
+            }
             
             position = new(-7, 1.3f, 7);
             transform = Matrix4.CreateTranslation(position);
@@ -74,8 +83,15 @@ namespace Physics_Engine
                 new Vector3(0.005f, 0.005f, 0.005f),
                 transform);
 
+            yPos = 0;
+
             foreach (var (_, obj) in model.SceneObjects)
+            {
+                obj.Transform *= Matrix4.CreateTranslation(new(0, yPos, 0));
+
                 _objects.Add(obj);
+                yPos += yoffset;
+            }
 
             Global.StartTimers();
         }
@@ -124,20 +140,13 @@ namespace Physics_Engine
             shader.SetVector3("uLightColor", new Vector3(1, 1, 1));
             shader.SetFloat("uAmbient", 0.2f);
 
-            float rot = Global.Elapsedtime * 0.25f;
-            rot = 0;
-
             foreach (var obj in _objects)
             {
-                Matrix4 model =
-                    Matrix4.CreateRotationY(rot) *
-                    obj.Transform;
-
                 GL.ActiveTexture(TextureUnit.Texture0);
                 GL.BindTexture(TextureTarget.Texture2D, obj.TextureID);
                 shader.SetInt("uTexture", 0);
 
-                shader.SetMatrix4("uModel", model);
+                shader.SetMatrix4("uModel", obj.Transform);
                 obj.Mesh.Draw();
             }
 

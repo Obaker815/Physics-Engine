@@ -3,10 +3,10 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace Physics_Engine
 {
-    internal class PlayerController
+    internal class IPlayerController
     {
         // Static property to hold all controllers for keybinding updates
-        private static List<PlayerController> Controllers = [];
+        private static List<IPlayerController> Controllers = [];
         public static void UpdateKeybindings(Keys keyPress, bool down)
         {
             foreach (var controller in Controllers)
@@ -39,7 +39,7 @@ namespace Physics_Engine
         internal Vector3 _velocity;
 
         // Constructors
-        public PlayerController(Matrix4 transform) 
+        public IPlayerController(Matrix4 transform) 
         { 
             Controllers.Add(this);
 
@@ -49,9 +49,9 @@ namespace Physics_Engine
             _pitch = euler.X;
             _yaw = euler.Y;
         }
-        public PlayerController(Vector3 position, Vector3 lookAt, Vector3 upDirection)
+        public IPlayerController(Vector3 position, Vector3 lookAt, Vector3 upDirection)
             : this(Matrix4.LookAt(position, lookAt, upDirection).Inverted()) { }
-        public PlayerController(Vector3 position, Vector3 lookAt) 
+        public IPlayerController(Vector3 position, Vector3 lookAt) 
             : this(position, lookAt, Vector3.UnitY) { }
 
         public virtual void Update()

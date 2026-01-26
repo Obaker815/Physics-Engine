@@ -1,9 +1,5 @@
 ﻿using OpenTK.Mathematics;
-using System.Drawing;
-using System.IO;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq.Expressions;
 
 namespace Physics_Engine
 {

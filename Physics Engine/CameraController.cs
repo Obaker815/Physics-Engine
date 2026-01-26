@@ -3,7 +3,7 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace Physics_Engine
 {
-    internal class CameraController : PlayerController
+    internal class CameraController : IPlayerController
     {
         // Private fields for camera properties
         private Matrix4 _projectionMatrix;
@@ -15,7 +15,7 @@ namespace Physics_Engine
             _sensitivity = 0.0025f,
             _fov = MathHelper.DegreesToRadians(105),
             _minFOV = MathHelper.DegreesToRadians(60),
-            _maxFOV = MathHelper.DegreesToRadians(120);
+            _maxFOV = MathHelper.DegreesToRadians(180);
         
         // Public access to private fields
         public Matrix4 ProjectionMatrix => _projectionMatrix;
