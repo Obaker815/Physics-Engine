@@ -13,7 +13,8 @@ namespace Physics_Engine
             _farClip = 1000f,
             _aspectRatio = 16f / 9f,
             _sensitivity = 0.0025f,
-            _fov = MathHelper.DegreesToRadians(105),
+            _fov = MathHelper.DegreesToRadians(105);
+        private readonly float
             _minFOV = MathHelper.DegreesToRadians(60),
             _maxFOV = MathHelper.DegreesToRadians(180);
         

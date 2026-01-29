@@ -38,8 +38,10 @@ namespace Physics_Engine
             Matrix4 cameraTransform =
                 Matrix4.CreateTranslation(3f, 2f, 2f);
 
-            _camera = new CameraController(cameraTransform, aspectRatio);
-            _camera.NearClip = 0.001f;
+            _camera = new(cameraTransform, aspectRatio)
+            {
+                NearClip = 0.001f
+            };
 
             WindowState = WindowState.Maximized;
             CursorState = CursorState.Grabbed;
@@ -54,44 +56,19 @@ namespace Physics_Engine
                 }
             );
 
+            void AddObject(Model model) { foreach (var (_, obj) in model.SceneObjects) _objects.Add(obj); }
+
             // Load model(s)
-            Vector3 position = new(0, 0, 0);
-            Matrix4 transform = Matrix4.CreateFromAxisAngle(Vector3.UnitX, MathHelper.DegToRad * -90) * Matrix4.CreateTranslation(position);
+            AddObject(new Model(
+                objDirectory: @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\source\",
+                texturesDirectory:@"C:\Users\Obaker815\Downloads\de_dust2-cs-map\textures\",
+                transform: Matrix4.CreateFromAxisAngle(Vector3.UnitX, MathHelper.DegreesToRadians(-90)) * Matrix4.CreateTranslation(new(0)),
+                scale: new Vector3(0.01f, 0.01f, 0.01f)));
 
-            Model model = new(
-                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\source\",
-                @"C:\Users\Obaker815\Downloads\de_dust2-cs-map\textures\",
-                transform,
-                new Vector3(0.01f, 0.01f, 0.01f));
-
-            int yPos = 0;
-            int yoffset = 6;
-
-            foreach (var (_, obj) in model.SceneObjects)
-            {
-                obj.Transform *= Matrix4.CreateTranslation(new(0, yPos, 0));
-
-                _objects.Add(obj);
-                yPos += yoffset;
-            }
-            
-            position = new(-7, 1.3f, 7);
-            transform = Matrix4.CreateTranslation(position);
-
-            model = new(
-                @"C:\Users\Obaker815\Downloads\Springtrap\Model.obj",
-                new Vector3(0.005f, 0.005f, 0.005f),
-                transform);
-
-            yPos = 0;
-
-            foreach (var (_, obj) in model.SceneObjects)
-            {
-                obj.Transform *= Matrix4.CreateTranslation(new(0, yPos, 0));
-
-                _objects.Add(obj);
-                yPos += yoffset;
-            }
+            AddObject(new Model(
+                objPath: @"C:\Users\Obaker815\Downloads\Springtrap\Model.obj",
+                scale: new Vector3(0.005f, 0.005f, 0.02f),
+                transform: Matrix4.CreateTranslation(new(-7, 1.3f, 7))));
 
             Global.StartTimers();
         }
@@ -119,9 +96,7 @@ namespace Physics_Engine
             _numframes++;
             this.Title = $"Textured + Lit Renderer " +
                 $"- FOV: {MathHelper.RadiansToDegrees(_camera.FOV):000} " +
-                $"- FPS: {_framerate} " +
-                $"- CameraPos: {_camera.Transform.ExtractTranslation()} " +
-                $"- CameraRotation: {_camera.Transform.ExtractRotation()}";
+                $"- FPS: {_framerate}";
 
             if (double.Floor(Global.Elapsedtime) > _lastFramerateUpdate)
             {
@@ -161,12 +136,12 @@ namespace Physics_Engine
 
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
-            PlayerController.UpdateKeybindings(e.Key, true);
+            IPlayerController.UpdateKeybindings(e.Key, true);
             base.OnKeyDown(e);
         }
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
-            PlayerController.UpdateKeybindings(e.Key, false);
+            IPlayerController.UpdateKeybindings(e.Key, false);
             base.OnKeyDown(e);
         }
         protected override void OnMouseDown(MouseButtonEventArgs e)

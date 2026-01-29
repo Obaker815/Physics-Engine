@@ -183,9 +183,9 @@ namespace Physics_Engine
 
         private SceneObject BuildSceneObject(string materialName, List<(int pos, int uv, int norm)[]> faces)
         {
-            List<float> vertices = new();
-            List<uint> indices = new();
-            Dictionary<string, uint> vertexMap = new();
+            List<float> vertices = [];
+            List<uint> indices = [];
+            Dictionary<string, uint> vertexMap = [];
             uint indexCounter = 0;
 
             foreach (var face in faces)
@@ -216,7 +216,7 @@ namespace Physics_Engine
                 }
             }
 
-            Mesh mesh = new(vertices.ToArray(), indices.ToArray());
+            Mesh mesh = new([.. vertices], [.. indices]);
 
             // Texture
             int textureID;
@@ -228,7 +228,7 @@ namespace Physics_Engine
             return new SceneObject(mesh, _transform, textureID);
         }
 
-        private static Image GenerateDefaultTexture()
+        private static Bitmap GenerateDefaultTexture()
         {
             int resolution = 100;
             int divisions = 8;

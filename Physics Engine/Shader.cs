@@ -13,7 +13,7 @@ namespace Physics_Engine
         {
             // Create a OpenGL4 program handle
             Handle = GL.CreateProgram();
-            List<int> compiledShaders = new();
+            List<int> compiledShaders = [];
 
             // for each shader in stages, compile and attach to the Handle
             foreach (var (type, source) in stages)
@@ -84,26 +84,15 @@ namespace Physics_Engine
             throw new Exception($"Uniform '{name}' not found.");
         }
 
-        public void SetMatrix4(string name, Matrix4 value) { GL.UniformMatrix4(GetLocation(name), false, ref value); }
-        public void SetVector4(string name, Vector4 value) { GL.Uniform4(GetLocation(name), value); }
-        public void SetVector3(string name, Vector3 value) { GL.Uniform3(GetLocation(name), value); }
-        public void SetVector2(string name, Vector2 value) { GL.Uniform2(GetLocation(name), value); }
-        public void SetFloat(string name, float value) { GL.Uniform1(GetLocation(name), value); }
-        public void SetInt(string name, int value) { GL.Uniform1(GetLocation(name), value); }
+        public void SetMatrix4(string name, Matrix4 value) => GL.UniformMatrix4(GetLocation(name), false, ref value);
+        public void SetVector4(string name, Vector4 value) => GL.Uniform4(GetLocation(name), ref value);
+        public void SetVector3(string name, Vector3 value) => GL.Uniform3(GetLocation(name), ref value);
+        public void SetVector2(string name, Vector2 value) => GL.Uniform2(GetLocation(name), ref value);
+        public void SetFloat(string name, float value) => GL.Uniform1(GetLocation(name), value);
+        public void SetInt(string name, int value) => GL.Uniform1(GetLocation(name), value);
 
-        public void Use()
-        {
-            GL.UseProgram(Handle);
-        }
-
-        public void Dispatch(int x, int y = 1, int z = 1)
-        {
-            GL.DispatchCompute(x, y, z);
-        }
-
-        public void Dispose()
-        {
-            GL.DeleteProgram(Handle);
-        }
+        public void Use() => GL.UseProgram(Handle);
+        public void Dispose() => GL.DeleteProgram(Handle);
+        public static void Dispatch(int x, int y = 1, int z = 1) => GL.DispatchCompute(x, y, z);
     }
 }

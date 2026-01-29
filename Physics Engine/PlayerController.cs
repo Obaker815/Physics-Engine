@@ -6,7 +6,7 @@ namespace Physics_Engine
     internal class IPlayerController
     {
         // Static property to hold all controllers for keybinding updates
-        private static List<IPlayerController> Controllers = [];
+        private readonly static List<IPlayerController> Controllers = [];
         public static void UpdateKeybindings(Keys keyPress, bool down)
         {
             foreach (var controller in Controllers)
@@ -61,7 +61,7 @@ namespace Physics_Engine
 
             float accel = _accelleration * Global.Deltatime;
 
-            foreach (var (key, value) in _keyStates)
+            foreach (var (_, value) in _keyStates)
                 if (value.IsActive)
                     _velocity += Vector3.Transform(value.Direction, rotation) * accel;
 
