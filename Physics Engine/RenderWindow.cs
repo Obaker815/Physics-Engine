@@ -67,7 +67,7 @@ namespace Physics_Engine
 
             AddObject(new Model(
                 objPath: @"C:\Users\Obaker815\Downloads\Springtrap\Model.obj",
-                scale: new Vector3(0.005f, 0.005f, 0.02f),
+                scale: new Vector3(0.005f, 0.005f, 0.005f),
                 transform: Matrix4.CreateTranslation(new(-7, 1.3f, 7))));
 
             Global.StartTimers();

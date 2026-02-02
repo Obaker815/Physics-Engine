@@ -16,7 +16,7 @@ namespace Physics_Engine
             _fov = MathHelper.DegreesToRadians(105);
         private readonly float
             _minFOV = MathHelper.DegreesToRadians(60),
-            _maxFOV = MathHelper.DegreesToRadians(180);
+            _maxFOV = MathHelper.DegreesToRadians(160);
         
         // Public access to private fields
         public Matrix4 ProjectionMatrix => _projectionMatrix;
