@@ -27,6 +27,8 @@ namespace Physics_Engine
             { "Backward", new(Keys.S, new Vector3( 0, 0,  1)) },
             { "Left",     new(Keys.A, new Vector3(-1, 0,  0)) },
             { "Right",    new(Keys.D, new Vector3( 1, 0,  0)) },
+            { "Slow",     new(Keys.LeftAlt) },
+            { "Fast",     new(Keys.LeftControl) },
         };
         public Matrix4 Transform => _transform;
         internal Matrix4 _transform;
@@ -60,6 +62,8 @@ namespace Physics_Engine
             Quaternion rotation = Quaternion.FromAxisAngle(Vector3.UnitY, _yaw);
 
             float accel = _accelleration * Global.Deltatime;
+            if (_keyStates["Slow"].IsActive) accel /= 10f;
+            if (_keyStates["Fast"].IsActive) accel *= 10f;
 
             foreach (var (_, value) in _keyStates)
                 if (value.IsActive)

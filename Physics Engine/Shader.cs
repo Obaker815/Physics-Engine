@@ -39,6 +39,7 @@ namespace Physics_Engine
             GL.UseProgram(Handle);
             CacheUniforms();
             GL.UseProgram(0);
+            GL.PolygonMode(TriangleFace.Back, PolygonMode.Line);
         }
 
         private static int Compile(ShaderType type, string source)

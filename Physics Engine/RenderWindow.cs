@@ -2,7 +2,6 @@
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
-using System.Diagnostics;
 
 namespace Physics_Engine
 {
@@ -10,6 +9,10 @@ namespace Physics_Engine
     {
         private readonly List<SceneObject> _objects = [];
         private CameraController _camera;
+
+        private string[] shaders = ["uvColor", "normalColor", "textured_lit"];
+        private int shaderIndex = 0;
+        private int polygonMode = 0;
 
         public RenderWindow()
             : base(GameWindowSettings.Default,
@@ -53,6 +56,24 @@ namespace Physics_Engine
                 {
                     { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
                     { ShaderType.FragmentShader, "./Shaders/TexturedLit3D.frag" }
+                }
+            );
+
+            ShaderManager.Load(
+                "normalColor",
+                new Dictionary<ShaderType, string>
+                {
+                    { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
+                    { ShaderType.FragmentShader, "./Shaders/NormalColor.frag" }
+                }
+            );
+
+            ShaderManager.Load(
+                "uvColor",
+                new Dictionary<ShaderType, string>
+                {
+                    { ShaderType.VertexShader, "./Shaders/Projection3D.vert" },
+                    { ShaderType.FragmentShader, "./Shaders/uvColor.frag" }
                 }
             );
 
@@ -105,21 +126,28 @@ namespace Physics_Engine
                 _lastFramerateUpdate = (int)double.Floor(Global.Elapsedtime);
             }
 
-            Shader shader = ShaderManager.Get("textured_lit");
+            string selectedShader = shaders[shaderIndex];
+            Shader shader = ShaderManager.Get(selectedShader);
             shader.Use();
 
             shader.SetMatrix4("uView", Matrix4.Invert(_camera.Transform));
             shader.SetMatrix4("uProjection", _camera.ProjectionMatrix);
 
-            shader.SetVector3("uLightDir", -new Vector3(3, 3, 2).Normalized());
-            shader.SetVector3("uLightColor", new Vector3(1, 1, 1));
-            shader.SetFloat("uAmbient", 0.2f);
+            if (selectedShader == "textured_lit")
+            {
+                shader.SetVector3("uLightDir", -new Vector3(3, 3, 2).Normalized());
+                shader.SetVector3("uLightColor", new Vector3(1, 1, 1));
+                shader.SetFloat("uAmbient", 0.2f);
+            }
 
             foreach (var obj in _objects)
             {
-                GL.ActiveTexture(TextureUnit.Texture0);
-                GL.BindTexture(TextureTarget.Texture2D, obj.TextureID);
-                shader.SetInt("uTexture", 0);
+                if (selectedShader == "textured_lit")
+                {
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, obj.TextureID);
+                    shader.SetInt("uTexture", 0);
+                }
 
                 shader.SetMatrix4("uModel", obj.Transform);
                 obj.Mesh.Draw();
@@ -137,6 +165,16 @@ namespace Physics_Engine
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
             IPlayerController.UpdateKeybindings(e.Key, true);
+
+            if (e.Key == OpenTK.Windowing.GraphicsLibraryFramework.Keys.F2)
+                shaderIndex = (shaderIndex + 1) % shaders.Length;
+            if (e.Key == OpenTK.Windowing.GraphicsLibraryFramework.Keys.F3)
+                GL.PolygonMode(TriangleFace.Front, (PolygonMode)(6913 + polygonMode++));
+            polygonMode %= 2;
+
+            if (e.Key == OpenTK.Windowing.GraphicsLibraryFramework.Keys.Escape)
+                this.Close();
+
             base.OnKeyDown(e);
         }
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
