@@ -20,7 +20,7 @@ void main()
 
     float diff = dot(normal, lightDir) * 0.5 + 0.5;
 
-    vec3 color = texture(uTexture, vTexCoord).rgb;// * diff;
+    vec3 color = texture(uTexture, vTexCoord).rgb;
     color = color * (1 - uAmbient) + vec3(uAmbient);
     color = color * uLightColor;
 
